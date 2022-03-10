@@ -6,51 +6,230 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <meta name="description" content="An example module to create your own" />
-    <meta name="show-in" content="*" />
-    <title>Example Module</title>
+    <meta name="description" content="A live code editor module for use with stations" />
+    <meta name="show-in" content="station" />
+    <title>Code Editor</title>
 
     <script src="https://edrys-org.github.io/edrys/module/edrys.js"></script>
+    <script src="./split.min.js"></script>
+    <script defer src="https://edrys-org.github.io/agent-command-runner/command-runner.js"></script>
 
-    <script defer src="https://edrys-org.github.io/edrys/module/vendor/alpine.min.js"></script>
     <link rel="stylesheet" href="https://edrys-org.github.io/edrys/module/vendor/water.min.css" />
     <link rel="stylesheet" href="https://edrys-org.github.io/edrys/module/vendor/open-iconic/css/open-iconic.min.css" />
+
+    <link rel="stylesheet" data-name="monaco-editor/min/vs/editor/editor.main"
+        href="monaco-editor/min/vs/editor/editor.main.css">
+
+    <script src="./debounce.js"></script>
+
+    <script>
+        var require = { paths: { vs: 'monaco-editor/min/vs' } }
+    </script>
+    <script src="./monaco-editor/min/vs/loader.js"></script>
+    <script src="./monaco-editor/min/vs/editor/editor.main.nls.js"></script>
+    <script src="./monaco-editor/min/vs/editor/editor.main.js"></script>
+
 </head>
 
 <body>
-    <template x-if="!!edrys" x-data="{ edrys: undefined }" x-init="Edrys.onUpdate((e) => { edrys = {...e} })">
-        <div>
-            <h1>Example Module</h1>
-            <hr />
 
-            <h2>Room Data</h2>
-            <div x-text="JSON.stringify(edrys)"></div>
+    <button id="run" style="z-index: 100; position: absolute; right: 5px; bottom: 5px;" onclick="run()">
+        <span class="oi" data-glyph="media-play"></span>
+        Run Code
+    </button>
+    <div class="split">
+        <div id="commands" style="display: none;"></div>
+        <div id="editor"></div>
+        <div id="terminal"></div>
+    </div>
 
-            <h2>Send Message</h2>
-            <form x-data="{ subject: '', message: '' }" x-on:submit.prevent="Edrys.sendMessage(subject, message)">
-                <input type="text" required minlength="1" placeholder="Subject" x-model="subject" />
-                <input type="text" required minlength="1" placeholder="Body" x-model="message" />
-                <button type="submit">
-                    <span class="oi" data-glyph="arrow-thick-right" aria-hidden="true"></span>
-                    Send message
-                </button>
-            </form>
+    <script>
 
-            <h2>Received messages</h2>
-            <div x-data="{ messages: [] }" x-init="Edrys.onMessage((m) => { messages.push(m) })">
-                <em x-show="!messages.length">No messages received yet...</em>
-                <ul>
-                    <template x-for="message in messages">
-                        <li>
-                            <code x-text="message.from"></code>:
-                            <code x-text="message.subject"></code> -
-                            <code x-text="message.body"></code>
-                        </li>
-                    </template>
-                </ul>
-            </div>
-        </div>
-    </template>
+        let init = false
+        Edrys.onUpdate((e) => {
+            if (!init) {
+                if (Edrys.role == 'station') {
+                    document.getElementById('commands').style.display = 'block'
+                }
+
+                Split(Edrys.role == 'station' ?
+                    ['#commands', '#editor', '#terminal'] :
+                    ['#editor', '#terminal'], {
+                    direction: 'vertical',
+                    sizes: Edrys.role == 'station' ? [20, 60, 20] : [80, 20]
+                })
+            }
+
+            init = true
+        })
+
+        let language = Edrys?.module?.config?.language || 'cpp'
+        let theme = localStorage.getItem('theme') || (window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches ? 'vs-dark' : 'vs-light')
+
+
+        let running = false;
+        async function runCommands() {
+            if (running) return
+            running = true
+            document.getElementById('run').disabled = true
+            terminal.setScrollPosition({ scrollTop: 0 });
+            let output = 'Running code...\n'
+            cmds = commands.getValue().split('\n').filter(c => !c.startsWith('#'))
+            for (const cmd of cmds) {
+                output += await run_command(cmd.replace('$CODE', btoa(editor.getValue())))
+                Edrys.sendMessage('output', output)
+            }
+            running = false
+            document.getElementById('run').disabled = false
+        }
+
+        const client = new Date().getTime()
+        let sendMsgNext = true
+        function save() {
+            const value = editor.getValue()
+            if (sendMsgNext)
+                Edrys.sendMessage('update', JSON.stringify({ value, client }))
+            else
+                sendMsgNext = !sendMsgNext
+            localStorage.setItem('code', value)
+        }
+
+        function run() {
+            Edrys.sendMessage('run', '')
+        }
+
+        Edrys.onMessage(({ from, subject, body }) => {
+
+            if (subject == 'update') {
+                const b = JSON.parse(body)
+                if (b.client == client) return
+                console.log(b.client, client)
+                sendMsgNext = false
+                editor.setValue(b.value)
+            }
+            else if (subject == 'run' && Edrys.role == 'station') {
+                runCommands()
+            }
+            else if (subject == 'output') {
+                terminal.setValue(body)
+                terminal.revealLineInCenter(0);
+            }
+        })
+
+
+        const editor = monaco.editor.create(document.getElementById('editor'), {
+            value: localStorage.getItem('code') || Edrys?.module?.config?.value || `// Type code here...
+// Right click or Ctrl + S to upload your code.`,
+            language: language,
+            theme: theme,
+            automaticLayout: true
+        })
+
+        const terminal = monaco.editor.create(document.getElementById('terminal'), {
+            value: `Right click or press Ctrl + S to upload code. Press F1 for more options.
+Note your code is not saved, so be sure to keep a copy.`,
+            theme: theme,
+            readOnly: true,
+            lineNumbers: false,
+            minimap: {
+                enabled: false
+            },
+            automaticLayout: true
+        })
+
+        const commands = monaco.editor.create(document.getElementById('commands'), {
+            value: localStorage.getItem('commands') || `# Type commands to be run here, one command per line\n
+# The string '$CODE' will be replaced with the submitted code (base64-encoded)
+echo "This is the code submitted:"
+echo $CODE | base64 --decode`,
+            language: 'shell',
+            theme: theme,
+            lineNumbers: false,
+            minimap: {
+                enabled: false
+            },
+            automaticLayout: true
+        })
+
+        editor.addAction({
+            id: 'upload-code',
+            label: 'Save & upload code...',
+            keybindings: [
+                monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S
+            ],
+            precondition: null,
+            keybindingContext: null,
+            contextMenuGroupId: 'navigation',
+            contextMenuOrder: 0,
+            run: function (ed) {
+                save()
+                run()
+                return null
+            }
+        });
+
+        editor.addAction({
+            id: 'toggle-theme',
+            label: 'Toggle dark theme',
+            precondition: null,
+            keybindingContext: null,
+            contextMenuGroupId: 'navigation',
+            contextMenuOrder: 1,
+            run: function (ed) {
+                let _theme = localStorage.getItem('theme') == 'vs-light' ? 'vs-dark' : 'vs-light'
+                ed.updateOptions({
+                    theme: _theme
+                })
+                localStorage.setItem('theme', _theme)
+                return null
+            }
+        });
+
+        editor.onDidChangeModelContent(save);
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, run)
+
+        commands.onDidChangeModelContent(() => {
+            localStorage.setItem('commands', commands.getValue())
+        });
+
+    </script>
+
+    <style>
+        html,
+        body,
+        .split {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        .gutter {
+            background-repeat: no-repeat;
+            background-position: 50%;
+        }
+
+        @media (prefers-color-scheme: light) {
+            .gutter {
+                background-color: #ececec;
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .gutter {
+                background-color: #0f0f0f;
+            }
+
+        }
+
+        .gutter.gutter-vertical {
+            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAFAQMAAABo7865AAAABlBMVEVHcEzMzMzyAv2sAAAAAXRSTlMAQObYZgAAABBJREFUeF5jOAMEEAIEEFwAn3kMwcB6I2AAAAAASUVORK5CYII=');
+            cursor: row-resize;
+        }
+    </style>
 </body>
 
 </html>

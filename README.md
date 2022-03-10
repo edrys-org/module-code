@@ -1,30 +1,32 @@
-# Edrys Module Template
+# Edrys Code Editor Module
 
-This is a basic bare-bones Edrys Module, it is a good staring point for creating your own modules.
-
-- Visit the [Edrys Modules documentation](https://github.com/edrys-org/edrys/blob/main/docs/Modules.md) for more infromation
-- Click "Use this template" in the top right to get started
+This module allows teachers and students to collaborate over some code and "run" it in some form. It is meant to be used with stations, where commands are going to be run using the [the Command Runner Agent](https://github.com/edrys-org/agent-command-runner), for example to upload code to an embedded device or run it on locally and return the result.
 
 
-## Tech Stack
+## Usage
 
-While Modules can be written in any combination of frontend technologies, we use and recommend the following:
+Use this URL to add the module to your class:
 
-- [Alpine.js](https://alpinejs.dev/) for UI (An alternative to JQuery, React or Vue)
-- [Water.css](https://watercss.kognise.dev/) for styles (A tiny CSS reset with no classes)
-- [Open Iconic](https://useiconic.com/open) for icons
+```
+https://edrys-org.github.io/module-code/
+```
 
-This combination results in lightweight, fast modules with very easy to read code that is largely free of framework boilerplate, and requires no build step. You also don't need to spend any time learning these frameworks as they are very easy to pick up.
+Next, set up [the Command Runner Agent](https://github.com/edrys-org/agent-command-runner) on your station(s) to allow the module to run commands when the code is run. On the station device, you will be able to specify what commands will be run when students or teachers run the code. Every station has its own set of commands saved (they will be saved locally on each station).
 
-## Development
+The module will silently fail if the agent is not locally running in the station device (expected to be on the default port `8585`).
 
-Serve the module on localhost and add it to an Edrys class, then use any editor to modify the module. We recommend:
+## Arduino example
 
-- [VS Code Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) which allows you to see your changes live as you make them
-- [VS Code Alpine.js Intellisense](https://marketplace.visualstudio.com/items?itemName=adrianwilczynski.alpine-js-intellisense)
+Below is an exmaple where this module is used to allow students to upload code to a live Arduino station.
 
-## Deployment
+This is what students and teachers see in the station, where the top section is the code editor, and the bottom section is a terminal showing command output when the code is run (note dark theme is pictured):
+<div align="center">
+<img src="screen-user.png" style="width: 90%"/>
+</div>
 
-To use the module, you need to serve it from somewhere and paste its link into your Edrys class settings. One convenient solution is [GitHub Pages](https://pages.github.com/). Alternatives includes Netlify, GitLab pages, or placing the module in the Edrys static directory.
+When visiting the module on the station device itself, you will also be able to customize what commands will be run for that module (using `$CODE` in the commands to substitue for the submitted code):
+<div align="center">
+<img src="screen-station.png" style="width: 90%"/>
+</div>
 
-When releasing a module on GitHub, you can tag it with `edrys` and `edrys-module` to make it easy for others to find.
+Arduino CLI is set up manually beforehand on station devices.
