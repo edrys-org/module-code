@@ -13,7 +13,7 @@ https://edrys-org.github.io/module-code/
 
 You may specify the following config:
 
-```
+```js
 {
   "language": "cpp" // or any langauge from https://microsoft.github.io/monaco-editor/
 }
