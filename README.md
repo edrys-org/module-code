@@ -11,6 +11,14 @@ Use this URL to add the module to your class:
 https://edrys-org.github.io/module-code/
 ```
 
+You may specify the following config:
+
+```
+{
+  "language": "cpp" // or any langauge from https://microsoft.github.io/monaco-editor/
+}
+```
+
 Next, set up [the Command Runner Agent](https://github.com/edrys-org/agent-command-runner) on your station(s) to allow the module to run commands when the code is run. On the station device, you will be able to specify what commands will be run when students or teachers run the code. Every station has its own set of commands saved (they will be saved locally on each station).
 
 The module will silently fail if the agent is not locally running in the station device (expected to be on the default port `8585`).
