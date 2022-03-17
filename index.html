@@ -119,7 +119,7 @@
 
 
         const editor = monaco.editor.create(document.getElementById('editor'), {
-            value: Edrys.getItem('editorText') || Edrys?.module?.config?.editorText || `// Type code here...
+            value: `// Type code here...
 // Right click or Ctrl + S to upload your code.`,
             language: language,
             theme: theme,
@@ -127,8 +127,7 @@
         })
 
         const terminal = monaco.editor.create(document.getElementById('terminal'), {
-            value: Edrys?.module?.config?.terminalText ||
-                `Right click or press Ctrl + S to upload code. Press F1 for more options.
+            value: `Right click or press Ctrl + S to upload code. Press F1 for more options.
 Note your code is not saved, so be sure to keep a copy.`,
             theme: theme,
             readOnly: true,
@@ -140,8 +139,7 @@ Note your code is not saved, so be sure to keep a copy.`,
         })
 
         const commands = monaco.editor.create(document.getElementById('commands'), {
-            value: Edrys.getItem('commands') || Edrys?.module?.config?.commands ||
-                `# Type commands to be run here, one command per line\n
+            value: `# Type commands to be run here, one command per line\n
 # The string '$CODE' will be replaced with the submitted code (base64-encoded)
 echo "This is the code submitted:"
 echo $CODE | base64 --decode`,
@@ -194,6 +192,12 @@ echo $CODE | base64 --decode`,
         commands.onDidChangeModelContent(() => {
             Edrys.setItem('commands', commands.getValue())
         });
+
+        Edrys.onReady(() => {
+            editor.setValue(Edrys.getItem('editorText') || Edrys.module.config.editorText || editor.getValue())
+            terminal.setValue(Edrys.module.config.terminalText || terminal.getValue())
+            commands.setValue(Edrys.getItem('commands') || Edrys.module.config.commands || commands.getValue())
+        })
 
     </script>
 
