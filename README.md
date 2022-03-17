@@ -15,6 +15,20 @@ Next, set up [the Command Runner Agent](https://github.com/edrys-org/agent-comma
 
 The module will silently fail if the agent is not locally running in the station device (expected to be on the default port `8585`).
 
+### Configuration
+
+You may optionally specify any of the following module config:
+
+```json
+{
+    "editorText": "Starting text in editor...",
+    "terminalText": "Starting text in terminal...",
+    "commands": "Default commands",
+    "language": "cpp",
+    "theme": "light"
+}
+```
+
 ## Arduino example
 
 Below is an exmaple where this module is used to allow students to upload code to a live Arduino station.
@@ -30,3 +44,4 @@ When visiting the module on the station device itself, you will also be able to 
 </div>
 
 Arduino CLI is set up manually beforehand on station devices.
+
